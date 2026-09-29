@@ -1,4 +1,6 @@
-# Unposted draft for #22677; awaits explicit approval
+# Posted comment for #22677
+
+Public comment: [openai/codex#22677](https://github.com/openai/codex/issues/22677#issuecomment-5894737689)
 
 ---
 

@@ -61,5 +61,6 @@ boundary. Live-model interpretation, compaction and model switching are untested
 
 See [DESIGN.md](DESIGN.md) for architecture and decisions,
 [VALIDATION.md](VALIDATION.md) for validation evidence and reproduction commands,
-and [UPSTREAM_COMMENT.md](UPSTREAM_COMMENT.md) for the unpublished comment draft
-targeting [openai/codex#22677](https://github.com/openai/codex/issues/22677).
+and [UPSTREAM_COMMENT.md](UPSTREAM_COMMENT.md) for the archived upstream comment.
+
+Upstream discussion: [openai/codex#22677 comment](https://github.com/openai/codex/issues/22677#issuecomment-5894737689).
