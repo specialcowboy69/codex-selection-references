@@ -1,75 +1,51 @@
-# Turn-scoped selection references: design and implementation plan
-
-## Scope and evidence
+# Selection reference design and public architecture
 
 Investigated public baseline: `d515b2f85ec1b24a4b5ec3fbd86db27fd51aea3b`.
-Desktop's composer is absent. This is a public-client prototype, not a Desktop
-patch. It uses the existing Python SDK `TextInput` and app-server `turn/start`.
-No public API, generated schema, server state, or persistent alias registry changes.
+Desktop's composer is absent; an [OpenAI maintainer confirms the boundary](https://github.com/openai/codex/discussions/16538).
+Its exact selection serializer cannot be traced here. This client example uses
+existing Python SDK `TextInput` and app-server `turn/start`, without changing
+SDK exports, generated schemas, server state or a persistent alias registry.
 
-## Contract
+## Decisions
 
-- Each `SelectionDraft` owns captured strings and monotonically increasing `$aN`
-  labels. IDs are stable after deletion (gaps allowed); silently retargeting an
-  already-written question is worse than gaps. No reorder API in this prototype.
-- `add(content)` returns an immutable, identity-based `SelectionRef` with a label.
-  Explicit rich-reference nodes and ordinary text strings form the request.
-- `submit(parts)` validates ownership and membership, compiles referenced content
-  in place, includes unreferenced attachments, and returns a frozen
-  `PreparedMessage(text)`. Only after successful validation does it clear the draft.
-- `clear()` starts a fresh message at `$a1`; old handles remain invalid even when
-  their label is reused. References from another draft are rejected.
-- A prepared snapshot is an in-memory retry payload. Retry exactly that snapshot;
-  do not re-resolve old labels against the next draft. No automatic network retry.
-- Serialize structured request parts and quoted attachments as JSON inside the
-  existing TextInput. Do not include generated alias labels in this model text.
-  This is a compatible textual boundary, not a native model selection type.
-- Raw strings are never scanned or expanded. A literal `$a1`, including in code,
-  stays literal. A future rich composer must explicitly bind typed occurrences or
-  insert handles by clicking labels. Automatic typed-token binding is out of scope.
-- Bound the complete serialized selection payload to 1,000 UTF-8 bytes, at most
-  32 attached selections. Reject overflow without clearing the draft. Quoted data
-  stays data via JSON escaping, but this does not create a model authority boundary.
-- With no attachments/references, preserve plain user text exactly. The example
-  still rejects an empty message. It creates no configuration or memory files.
+`SelectionDraft` owns immutable identity-based handles and a monotonic label
+counter. Stable labels with deletion gaps prevent existing questions from silently
+changing targets. `submit` validates membership, compiles explicit nodes in place,
+includes unreferenced attachments and clears only after successful compilation.
+An immutable `PreparedMessage` carries retries independently of future drafts.
+Raw strings are never scanned, including matching `$aN` tokens in code or quotes.
+The [README](README.md) describes lifecycle, literal-text behavior and limits.
 
-History, replay, compaction, and model changes retain ordinary submitted content.
-There is no alias lookup to reactivate. This guarantees client resolution, not a
-claim that an LLM can never infer a meaning for historical or literal text.
+The 32-selection and 1,000-byte caps are prototype choices. The original review
+reduced 4,096 bytes to 1,000 to keep this example's accepted context output small;
+this does not establish a product contract. The aggregate JSON cap includes
+overhead, so `add` acceptance need not imply `submit` acceptance. It bounds
+accepted output, not temporary work or allocation; an allocation-budget redesign
+and optional extra coverage are outside this polishing stage.
 
-## Implementation plan
+## Public paths inspected
 
-> Execution: subagents implement and independently review, under the user's
-> explicit authorization to proceed automatically after the technical report.
+Paths below are relative to `codex-rs/` unless marked otherwise.
 
-**Tech stack:** Python >=3.10, stdlib core, existing SDK, pytest and Ruff.
+| Path | Finding |
+| --- | --- |
+| `tui/src/transcript_view/input.rs`, `tui/src/app/owned_transcript.rs` | Selection actions primarily copy; no accumulated Add to chat collection found |
+| `tui/src/bottom_pane/chat_composer.rs` | TUI drafts, paste placeholders and submission lifecycle |
+| `tui/src/ide_context/prompt.rs` | Current IDE context fetched for submission, separate from captured selections |
+| `sdk/python/src/openai_codex/_inputs.py` (repository root) | Existing `TextInput` serialization |
+| `app-server-protocol/src/protocol/v2/turn.rs`, `app-server/src/request_processors/turn_processor.rs` | `UserInput`, `TurnStartParams` and turn dispatch |
+| `protocol/src/user_input.rs`, `protocol/src/models.rs` | UI-only `TextElement` spans discarded on model conversion |
+| `core/src/state/additional_context.rs` | Source-keyed snapshot/diff storage, unsuitable for ephemeral aliases |
+| `core/src/session/rollout_reconstruction.rs`, `core/src/compact.rs` | Replay/compaction of ordinary submitted content |
 
-**Files:** `selection_refs.py` (draft/compiler), `sync.py` (offline demonstration),
-`README.md` (usage/limitations), `UPSTREAM_ISSUE.md` (unpublished proposal),
-`../../tests/test_selection_refs_example.py` (unit coverage),
-`../../tests/test_selection_refs_transport.py` (real app-server/mock model).
+A Desktop implementation would need draft-owned selections, secondary labels on
+cards, explicit rich reference nodes and send-time compilation. A native v2 input
+would additionally need validation, schema generation, UI conversion and
+replay/compaction coverage. `TextElement`, `Mention` and `additionalContext` do not
+provide this mechanism. Neither implementation is part of the example.
 
-### Task 1: draft and compiler
-
-- [x] Write failing tests for one/many selections, stable deletion/addition,
-      foreign/deleted/expired handles, clear/reset, raw literals, JSON escaping,
-      overflow, failed submission preservation, and immutable retry snapshots.
-- [x] Run tests red, implement the contract, run tests green and scoped lint/types.
-- [x] Independently review scope, state lifecycle, and hostile/Unicode input.
-
-### Task 2: public transport and handoff
-
-- [x] Exercise compiled text through SDK + real app-server against the existing
-      local mock Responses server; inspect two messages with reused labels,
-      ordinary literal input, and resumed history. No real inference or billing.
-- [x] Run existing relevant SDK tests and report environment/baseline failures.
-- [x] Write offline executable example, usage and complete upstream issue draft.
-- [x] Run formatting and review final diff; limitations recorded in VALIDATION.md.
-
-## Review decisions
-
-Independent review checked expiry, deletion, Unicode, failure preservation and
-immutable retries. It reduced the original 4,096-byte cap to 1,000 UTF-8 bytes to
-avoid the repository's >1,000-token context-item review threshold. Added explicit
-duplicate-content identity coverage. Keep local commits on the dedicated branch;
-documentation lives beside the example. Do not publish an issue or external PR.
+Unit tests cover identity, stable deletion, expiry, literal text, Unicode/escaping,
+failed submission preservation and immutable snapshots. Transport tests inspect
+actual local app-server requests and resumed history with a mock model endpoint.
+These establish client resolution and transport, not Desktop UI, typed binding,
+live-model semantics or a prompt-injection security boundary.

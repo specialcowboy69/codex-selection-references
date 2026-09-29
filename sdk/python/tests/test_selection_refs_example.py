@@ -142,7 +142,7 @@ def test_hostile_delimiters_and_unicode_round_trip_as_quoted_data():
     }
 
 
-def test_add_rejects_capacity_and_oversized_quotes_without_consuming_labels():
+def test_prototype_add_limits_reject_overflow_without_consuming_labels():
     draft = SelectionDraft()
     for number in range(32):
         last = draft.add(str(number))
@@ -156,7 +156,7 @@ def test_add_rejects_capacity_and_oversized_quotes_without_consuming_labels():
     assert draft.add("retained").label == "$a1"
 
 
-def test_complete_serialized_utf8_limit_accepts_boundary_and_retains_failed_draft():
+def test_prototype_serialized_utf8_limit_accepts_boundary_and_retains_failed_draft():
     draft = SelectionDraft()
     ref = draft.add("é")
     baseline = json.dumps(
@@ -173,7 +173,7 @@ def test_complete_serialized_utf8_limit_accepts_boundary_and_retains_failed_draf
 
 
 @pytest.mark.parametrize("content", ["\x00" * 1000, "quoted" * 100])
-def test_escaping_and_repeated_reference_overflow_are_counted(content):
+def test_prototype_payload_limit_counts_escaping_and_repeated_references(content):
     draft = SelectionDraft()
     ref = draft.add(content)
     with pytest.raises(ValueError, match="1000"):

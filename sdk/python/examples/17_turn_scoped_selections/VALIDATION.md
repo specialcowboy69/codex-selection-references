@@ -1,4 +1,7 @@
-# Validation record
+# Historical validation record
+
+These results predate the rebase and polishing stage. They are retained as
+historical evidence; refreshed full SDK validation is a separate next step.
 
 Date: 2026-09-29. Public baseline: `d515b2f85ec1b24a4b5ec3fbd86db27fd51aea3b`.
 Windows; installed app-server `codex-cli 0.158.0-alpha.2.1`, not a Rust build of this

@@ -4,8 +4,10 @@ import json
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-MAX_SELECTIONS = 32
-MAX_PAYLOAD_BYTES = 1000
+# Demonstration limits, not Codex product recommendations. The serialized cap
+# bounds accepted output; serialization/encoding can allocate more temporarily.
+PROTOTYPE_MAX_SELECTIONS = 32
+PROTOTYPE_MAX_PAYLOAD_BYTES = 1000
 
 
 @dataclass(frozen=True, eq=False)
@@ -34,9 +36,9 @@ class SelectionDraft:
         """Capture a bounded quote without renumbering existing labels."""
         if not isinstance(content, str):
             raise TypeError("selection content must be a string")
-        if len(self._selections) >= MAX_SELECTIONS:
+        if len(self._selections) >= PROTOTYPE_MAX_SELECTIONS:
             raise ValueError("a draft can attach at most 32 selections")
-        if len(content.encode("utf-8")) > MAX_PAYLOAD_BYTES:
+        if len(content.encode("utf-8")) > PROTOTYPE_MAX_PAYLOAD_BYTES:
             raise ValueError("selection content exceeds 1000 UTF-8 bytes")
         ref = SelectionRef(f"$a{self._next_id}", content)
         self._selections.append(ref)
@@ -84,7 +86,7 @@ class SelectionDraft:
                 ensure_ascii=False,
                 separators=(",", ":"),
             )
-            if len(text.encode("utf-8")) > MAX_PAYLOAD_BYTES:
+            if len(text.encode("utf-8")) > PROTOTYPE_MAX_PAYLOAD_BYTES:
                 raise ValueError("serialized selection payload exceeds 1000 UTF-8 bytes")
         else:
             text = "".join(part["text"] for part in request)
