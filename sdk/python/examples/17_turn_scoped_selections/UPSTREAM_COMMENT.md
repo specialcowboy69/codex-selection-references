@@ -1,68 +1,58 @@
-# Draft comment for openai/codex#22677
-
-**Unpublished draft.** Target: [openai/codex#22677](https://github.com/openai/codex/issues/22677).
-The planned fork branch is
-[feature/turn-scoped-selection-refs](https://github.com/specialcowboy69/codex-selection-references/tree/feature/turn-scoped-selection-refs);
-it is not public yet. Publication and refreshed validation must precede posting.
+# Unposted draft for #22677; awaits explicit approval
 
 ---
 
-This overlaps with #22677's request to keep each selected quote associated with
-its follow-up. A complementary lightweight interaction model is to give existing
-selection cards temporary labels such as `$a1` and `$a2`, and let one free-form
-prompt address several selections without requiring separate mini-editors:
+This complements [#22677](https://github.com/openai/codex/issues/22677)'s request
+for distinct quote/follow-up associations. A future composer could label
+selections and let one free-form prompt address several without separate
+mini-editors; per-selection comments could coexist:
 
 ```text
-$a1  [A cache avoids repeated work.]
-$a2  [Caching has invalidation costs.]
+$a1  A cache avoids repeated work.
+$a2  Caching has invalidation costs.
 
-Explain $a1 and tell me whether it contradicts $a2.
+Compare $a1 with $a2 and explain why they differ.
 ```
 
-Per-selection comments could still coexist with these references. Labels also
-allow comparison or discussion of multiple quotes in a single question.
+The public fork [specialcowboy69/codex-selection-references](https://github.com/specialcowboy69/codex-selection-references),
+branch `feature/turn-scoped-selection-refs`, contains the
+[prototype folder](https://github.com/specialcowboy69/codex-selection-references/tree/feature/turn-scoped-selection-refs/sdk/python/examples/17_turn_scoped_selections).
+Its lifecycle is scoped to the current **user-message draft**, since one active
+agent turn can accept several steering inputs:
 
-The proposed bindings belong to one **user-message draft**: an active agent turn
-can accept several steering inputs, so its server turn ID is too broad.
+- Explicit reference nodes resolve only by captured selection identity in that
+  draft. Raw `$aN` strings always remain literal, even beside matching selections;
+  a future composer must explicitly bind occurrences or insert reference nodes.
+- Deletion preserves existing labels and leaves gaps. New attachments get the
+  next number, preventing references from silently changing their target.
+- Successful compilation/send preparation or clearing expires bindings **before
+  transport**. New drafts restart at `$a1`; old handles never reactivate.
+- Retry the frozen payload without rebinding against a newer draft. Resending is
+  not idempotent; reconcile uncertain acceptance first.
 
-- Start each draft at `$a1`. Bind explicit reference nodes by captured selection
-  identity, not by searching label text or previous messages.
-- Preserve labels after deletion, allowing gaps; new attachments take the next
-  number so existing references never silently change their target.
-- Expire bindings on successful compilation/send preparation or clearing the
-  draft. Reused labels belong to new selections; old handles remain invalid.
-- Keep raw `$aN` strings literal, including code and strings beside a matching
-  attachment. A composer must explicitly bind typed occurrences or insert a rich
-  reference when a label is clicked; there is no global token parser.
-- Freeze the payload before transport. Retry that exact snapshot without
-  consulting a newer draft; reconcile uncertain acceptance before resending.
+The example compiles handles into quoted JSON text, including unreferenced
+attachments, using existing Python SDK `TextInput` and app-server `turn/start`.
+It changes no public SDK exports or wire schemas. It is **not a Desktop
+implementation**: its composer source is absent here; the
+[maintainer confirms](https://github.com/openai/codex/discussions/16538) Desktop
+is closed source and uses CLI app-server APIs.
 
-The local prototype in `sdk/python/examples/17_turn_scoped_selections` demonstrates
-this identity/resolution lifecycle and transport through the existing public
-Python SDK `TextInput` and app-server `turn/start`. It compiles explicit handles
-into inline quoted JSON text and includes unreferenced attachments. It changes
-no SDK exports, Rust core or wire schemas.
+[Fresh validation](https://github.com/specialcowboy69/codex-selection-references/blob/feature/turn-scoped-selection-refs/sdk/python/examples/17_turn_scoped_selections/VALIDATION.md)
+on 2026-09-29: **27 passed** (25 unit cases, two real app-server transport cases
+with mocked Responses, including restart/resume and explicit resend). Full SDK:
+**288 passed, 41 skipped, three failed**; all three reproduce on the clean
+baseline under the same environment. Ruff checks pass; 78 files pass formatting.
+These Windows checks used Python 3.13.15 and installed CLI `0.158.0-alpha.2.1`,
+not CI's Linux/same-source Bazel runtime. The full suite is not green.
 
-It is **not a Desktop implementation**. The composer is absent from the public
-checkout, as [the maintainer explains](https://github.com/openai/codex/discussions/16538).
-Selection cards, click insertion and automatic typed-token binding are not
-implemented. Quoted content persists in ordinary history; only active client
-bindings expire. JSON escaping is a syntactic boundary, not a model authority or
-prompt-injection security boundary, and no live-model semantic guarantee is made.
+The **32-selection/1,000 UTF-8-byte** caps are prototype choices, not product recommendations. Aggregate JSON
+includes request text, escaping, structure and repeated references; rejection
+preserves the draft. This bounds accepted output, not peak memory. History keeps
+ordinary submitted content; only client bindings expire. JSON escaping is not a
+prompt-injection security boundary; no live-model interpretation is claimed.
 
-The demonstration caps remain 32 selections and 1,000 UTF-8 bytes, not product
-recommendations. The aggregate submission cap includes JSON overhead, request
-text, escaping and repeated references; accepted quotes can still yield a rejected
-submission, preserving the draft. It bounds accepted output, not peak memory.
-
-The historical validation record reports 25 unit cases and two local transport
-tests using installed CLI `0.158.0-alpha.2.1` and a mock Responses endpoint. Those
-results predate the current rebase/polish; `VALIDATION.md` retains the environment,
-commands and unrelated full-SDK failures pending fresh validation. They do not
-prove Desktop integration or live-model interpretation.
-
-[#22670](https://github.com/openai/codex/issues/22670) is adjacent: it requests
-visible selected context in sent messages/history. The prototype preserves quote
-text through transport/resume but does not implement that history UI. Native
-structural preservation would require a separate experimental v2 input design
-with validation and replay/compaction coverage.
+[#42719](https://github.com/openai/codex/issues/42719) reports Desktop-to-Web
+selected-text fallback rendering: quote and request survive synchronization,
+while serialization-style headings and a literal HTML entity become visible.
+This highlights representation across surfaces; it does not establish Desktop's
+internal serializer or show that this prototype fixes that UI.
