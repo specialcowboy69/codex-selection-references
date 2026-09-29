@@ -48,7 +48,7 @@ tracked/untracked status before and after testing. The feature checkout was also
 clean after both full runs: no source, test, dependency or generated-file drift.
 The failing sources and SDK lockfile are identical between the two code revisions.
 No product fixes occurred, so the fresh targeted results still apply to identical
-code. Only this validation document changed afterward. No feature regression was
+code. Since the tested SHA, only documentation has changed. No feature regression was
 observed in these checks; the full SDK suite is not green in this environment.
 
 ## Reproduction
