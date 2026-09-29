@@ -8,6 +8,10 @@ Each example folder contains runnable versions:
 All examples intentionally use only public SDK exports from `openai_codex`
 and `openai_codex.types`.
 
+Example [17_turn_scoped_selections](17_turn_scoped_selections/README.md) is an
+offline client prototype with `sync.py` only. It demonstrates temporary selection
+references and prepares text for the existing SDK, without modifying Desktop.
+
 Examples use plain strings for text-only turns and typed input objects for
 multimodal or structured input lists.
 
